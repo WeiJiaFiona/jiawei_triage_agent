@@ -26,7 +26,7 @@
 
 ```bash
 source ~/.bashrc >/dev/null 2>&1
-conda activate ClassPass
+conda activate TriageAgent
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 
 cd /home/jiawei2022/BME1325/medical_agent
