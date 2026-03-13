@@ -1,63 +1,57 @@
 # Triage Agent (Rules + RAG + Optional LLM)
 
-## 1. 项目说明
+## 1. 项目概览
 
-这是一个医疗分诊智能体，支持：
+当前分诊智能体提供以下能力：
 
-- 红/黄/绿分诊
-- 红旗征象规则兜底
-- RAG 检索知识增强
-- 可选 LLM 推理（失败时自动 fallback 到规则/启发式）
-- 结构化分诊交接单输出
-- 命令行对话窗口与 HTTP API 两种使用方式
+- 红/黄/绿三色分诊
+- 红旗征象与生命体征阈值规则兜底
+- 基于本地知识库与可选 OpenClaw 技能文档的 RAG 检索
+- 可选 LLM 推理（失败自动回退到本地启发式）
+- 结构化分诊交接单输出（`triage_handover_sheet`）
+- 命令行交互与 HTTP API 两种运行方式
 
-## 2. 核心能力
+## 2. 目录说明
 
-- 规则引擎：`configs/triage_rules.yaml`
-- 科室映射：`configs/departments_mapping.yaml`
-- RAG 配置：`configs/rag_sources.yaml`
-- 命令行问诊：`scripts/triage_cli.py`
-- 离线评测：`scripts/run_eval.py`
-- 多轮演示：`scripts/run_multiturn_demo.py`
-- API 服务：`src/medical_agent/api.py`
+- `configs/triage_rules.yaml`：分诊规则与红旗阈值
+- `configs/departments_mapping.yaml`：科室映射规则
+- `configs/rag_sources.yaml`：RAG 检索配置
+- `scripts/triage_cli.py`：命令行分诊窗口
+- `scripts/run_eval.py`：离线评测
+- `scripts/run_multiturn_demo.py`：多轮场景演示
+- `src/medical_agent/api.py`：API 服务
+- `data/triage_cases.jsonl`：评测样例集
 
 ## 3. 环境准备
-
-推荐使用你当前已有环境：
 
 ```bash
 source ~/.bashrc >/dev/null 2>&1
 conda activate ClassPass
 export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
-```
 
-安装依赖：
-
-```bash
 cd /home/jiawei2022/BME1325/medical_agent
 pip install -r requirements.txt
 ```
 
 ## 4. 配置 `.env`
 
-先复制模板：
-
 ```bash
 cp .env.example .env
 ```
 
-关键配置项：
+常用配置：
 
 - `OPENAI_API_KEY`：LLM 密钥（可为空）
-- `OPENAI_BASE_URL`：OpenAI-compatible 接口地址（例如 `https://api.openai.com/v1`）
+- `OPENAI_BASE_URL`：OpenAI-compatible 接口地址
 - `OPENAI_MODEL`：模型名
-- `OPENCLAW_SKILLS_PATH`：OpenClaw skills 本地路径（可选）
+- `OPENCLAW_SKILLS_PATH`：OpenClaw skills 根目录（可选）
+- `KNOWLEDGE_DIR`：本地知识库目录（会递归加载 `*.md`）
 
 说明：
 
-- 若 LLM 不可用（额度不足/模型不支持/网络错误），系统会自动 fallback，不会阻塞分诊流程。
+- 当 LLM 不可用时，系统会自动 fallback，不阻塞分诊流程。
 
-## 5. 命令行对话窗口（推荐）
+## 5. 命令行分诊
 
 启动：
 
@@ -66,16 +60,16 @@ cd /home/jiawei2022/BME1325/medical_agent
 PYTHONPATH=./src python scripts/triage_cli.py
 ```
 
-使用方式：
+交互规则：
 
 - 按提示输入患者信息、主诉、体征
-- 后续轮次可直接回车复用上一轮体征
+- 后续轮次可回车复用上一轮体征
 - 输入 `/quit` 结束会话
-- 终端输出结构化分诊结果（`triage_level`、`risk_flags`、`recommended_outpatient_entry` 等）
+- 输出包含：分诊等级、风险标签、是否转运、推荐去向
 
-## 6. HTTP API 使用
+## 6. API 运行
 
-启动服务：
+启动：
 
 ```bash
 cd /home/jiawei2022/BME1325/medical_agent
@@ -104,14 +98,14 @@ curl -X POST http://127.0.0.1:8000/triage \
 
 ## 7. 评测与测试
 
-离线评测（样例集）：
+离线评测：
 
 ```bash
 cd /home/jiawei2022/BME1325/medical_agent
 PYTHONPATH=./src python scripts/run_eval.py
 ```
 
-多轮场景演示：
+多轮演示：
 
 ```bash
 cd /home/jiawei2022/BME1325/medical_agent
@@ -125,9 +119,7 @@ cd /home/jiawei2022/BME1325/medical_agent
 PYTHONPATH=./src pytest -q
 ```
 
-## 8. 导入 OpenClaw Skills（可选）
-
-仅复用 `SKILL.md` 作为知识源，不依赖 open-claw runtime：
+## 8. OpenClaw 技能导入（可选）
 
 ```bash
 cd /home/jiawei2022/BME1325/medical_agent
@@ -137,7 +129,7 @@ python scripts/import_openclaw_skills.py \
   --output-dir data/knowledge/openclaw_skills
 ```
 
-## 9. 注意事项
+## 9. 当前实现边界
 
-- 该项目用于分诊与流程模拟，不提供最终临床诊断或处方建议。
-- 医疗高风险场景必须由人工医护复核。
+- 当前实现目标是分诊与流程路由，不做最终临床诊断与处方。
+- 医疗高风险场景必须人工复核。
