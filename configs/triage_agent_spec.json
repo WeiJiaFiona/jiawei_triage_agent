@@ -1,0 +1,385 @@
+{
+  "agent_id": "AGT-PAT-TRIAGE-01",
+  "agent_name": "Triage Agent",
+  "version": "v1.0.0",
+  "last_updated": "2026-03-13",
+  "owner": "BME1325",
+  "mission": "24x7 pre-consultation triage with safety-first routing for red/yellow/green acuity.",
+  "clinical_context": "hospital_outpatient_and_emergency_entry",
+  "scope": {
+    "in_scope": [
+      "multi-turn symptom and risk intake",
+      "vital-sign collection and validation",
+      "red/yellow/green triage decision",
+      "department routing recommendation",
+      "emergency transfer trigger",
+      "structured triage handover generation",
+      "human override escalation"
+    ],
+    "out_of_scope": [
+      "final diagnosis",
+      "prescription",
+      "medication dosing",
+      "definitive treatment planning"
+    ]
+  },
+  "hard_constraints": [
+    "must record temperature before final triage output",
+    "all red-flag conclusions must be double-checked by rule engine",
+    "must not bypass human emergency transfer process",
+    "must output uncertainty and request human review when key data are missing"
+  ],
+  "interaction_contract": {
+    "required_inputs": {
+      "patient_profile": [
+        "patient_id",
+        "age",
+        "sex"
+      ],
+      "chief_complaint": "free_text",
+      "vital_signs": [
+        "temperature_c",
+        "heart_rate_bpm",
+        "respiratory_rate_bpm",
+        "blood_pressure_sys",
+        "blood_pressure_dia",
+        "spo2_percent"
+      ],
+      "pain_score": "0_to_10",
+      "special_population_tags": [
+        "child",
+        "pregnancy_or_postpartum",
+        "older_adult",
+        "immunocompromised"
+      ]
+    },
+    "optional_inputs": [
+      "arrival_mode",
+      "trauma_mechanism",
+      "onset_time",
+      "past_history_summary",
+      "allergy_summary"
+    ],
+    "outputs": {
+      "triage_handover_sheet": {
+        "patient_id": "string",
+        "triage_level": "red|yellow|green",
+        "risk_flags": [
+          "string"
+        ],
+        "need_emergency_transfer": "boolean",
+        "recommended_outpatient_entry": "string",
+        "need_human_override": "boolean",
+        "temperature_c": "number",
+        "chief_complaint_summary": "string",
+        "missing_key_info": [
+          "string"
+        ],
+        "evidence": [
+          {
+            "source_type": "rule|guideline|sop",
+            "source_id": "string",
+            "snippet": "string"
+          }
+        ]
+      }
+    }
+  },
+  "decision_pipeline": {
+    "steps": [
+      "collect_minimum_dataset",
+      "normalize_symptoms",
+      "screen_red_flags_by_llm",
+      "confirm_red_flags_by_rule_engine",
+      "retrieve_triage_knowledge_via_rag",
+      "compute_acuity_and_department",
+      "apply_safety_overrides",
+      "emit_handover_and_audit_log"
+    ],
+    "priority_order": [
+      "safety_rules",
+      "vital_threshold_checks",
+      "retrieved_guideline_evidence",
+      "llm_reasoning"
+    ]
+  },
+  "triage_logic": {
+    "levels": {
+      "red": {
+        "definition": "immediate life-threatening risk or strong red-flag pattern",
+        "action": "immediate emergency transfer",
+        "examples": [
+          "chest pain with diaphoresis or near-syncope",
+          "severe dyspnea or hypoxia",
+          "altered consciousness",
+          "active major bleeding",
+          "polytrauma with thirst plus drowsiness"
+        ]
+      },
+      "yellow": {
+        "definition": "urgent but not immediately life-threatening",
+        "action": "priority emergency observation or fast-track urgent clinic",
+        "examples": [
+          "acute abdominal pain",
+          "high fever with systemic symptoms",
+          "moderate respiratory distress"
+        ]
+      },
+      "green": {
+        "definition": "non-urgent and stable",
+        "action": "routine outpatient routing",
+        "examples": [
+          "mild upper respiratory symptoms",
+          "chronic disease follow-up without alarm signs"
+        ]
+      }
+    },
+    "boundary_error_prevention": [
+      "route children with abdominal pain to pediatrics first unless red-flag indicates emergency",
+      "for reproductive-age female with abdominal pain, require pregnancy-related safety check",
+      "do not route based on single symptom keyword without vitals and context"
+    ]
+  },
+  "tools": {
+    "rule_engine": {
+      "purpose": "hard-check red flags and mandatory safety constraints",
+      "input": [
+        "structured_symptoms",
+        "vital_signs",
+        "special_population_tags"
+      ],
+      "output": [
+        "rule_matched_flags",
+        "acuity_floor",
+        "must_transfer"
+      ]
+    },
+    "vital_threshold_checker": {
+      "purpose": "detect physiologic instability",
+      "output": [
+        "abnormal_vitals",
+        "severity_score"
+      ]
+    },
+    "rag_retriever": {
+      "purpose": "retrieve triage rules, guideline excerpts, and hospital SOP",
+      "knowledge_sources": [
+        "triage_rules",
+        "clinical_guidelines",
+        "hospital_workflow_sop",
+        "special_population_safety_protocols"
+      ],
+      "retrieval_policy": {
+        "top_k": 5,
+        "min_relevance_score": 0.72,
+        "must_include_rule_or_guideline": true
+      }
+    }
+  },
+  "rag_and_anti_hallucination": {
+    "grounding_requirements": [
+      "each high-risk decision must include at least one rule or guideline citation",
+      "if retrieval confidence below threshold, set need_human_override=true",
+      "never fabricate unavailable values; mark as missing_key_info"
+    ],
+    "generation_controls": [
+      "structured_json_output_only",
+      "no diagnosis statements",
+      "no drug recommendations",
+      "explicit uncertainty expression when evidence is weak"
+    ],
+    "fallback_policy": [
+      "missing_vitals => continue targeted questioning",
+      "persistent missing critical fields => escalate to human triage nurse",
+      "contradiction between llm and rules => rules win and log conflict"
+    ]
+  },
+  "state_management": {
+    "session_context_fields": [
+      "patient_id",
+      "chief_complaint",
+      "dialogue_history",
+      "vital_signs",
+      "temperature_c",
+      "risk_flags",
+      "triage_level",
+      "target_department",
+      "need_emergency_transfer",
+      "need_human_override",
+      "audit_trace_id"
+    ],
+    "memory_policy": {
+      "short_term": "current_visit_only",
+      "long_term_writeback": [
+        "major_risk_events",
+        "confirmed_allergy_or_safety_alerts"
+      ]
+    }
+  },
+  "workflow_state_machine": {
+    "states": [
+      "start",
+      "collecting_info",
+      "insufficient_data",
+      "rule_validation",
+      "triage_decided",
+      "escalated_to_human",
+      "handover_emitted",
+      "closed"
+    ],
+    "transitions": [
+      {
+        "from": "start",
+        "to": "collecting_info",
+        "condition": "patient_arrival"
+      },
+      {
+        "from": "collecting_info",
+        "to": "insufficient_data",
+        "condition": "missing_required_fields"
+      },
+      {
+        "from": "collecting_info",
+        "to": "rule_validation",
+        "condition": "required_fields_ready"
+      },
+      {
+        "from": "insufficient_data",
+        "to": "collecting_info",
+        "condition": "new_answer_received"
+      },
+      {
+        "from": "rule_validation",
+        "to": "escalated_to_human",
+        "condition": "critical_conflict_or_low_confidence"
+      },
+      {
+        "from": "rule_validation",
+        "to": "triage_decided",
+        "condition": "safety_checks_passed"
+      },
+      {
+        "from": "triage_decided",
+        "to": "handover_emitted",
+        "condition": "handover_sheet_written"
+      },
+      {
+        "from": "handover_emitted",
+        "to": "closed",
+        "condition": "acknowledged_by_downstream"
+      }
+    ]
+  },
+  "prompt_policy": {
+    "system_rules": [
+      "You are a triage agent, not a diagnostic doctor.",
+      "Safety > speed. If uncertain, escalate.",
+      "Output must conform to schema.",
+      "Always ask for temperature if missing.",
+      "Never provide prescriptions or treatment doses."
+    ],
+    "conversation_strategy": [
+      "ask shortest next-best question",
+      "prioritize red-flag disambiguation first",
+      "end early when red criteria are confirmed"
+    ]
+  },
+  "evaluation": {
+    "offline_test_sets": [
+      "common_green_cases",
+      "urgent_yellow_cases",
+      "critical_red_cases",
+      "atypical_hidden_critical_cases",
+      "special_population_boundary_cases",
+      "deception_or_incomplete_info_cases"
+    ],
+    "key_metrics": {
+      "red_miss_rate": "target <= 0.5%",
+      "red_flag_recall": "target >= 99%",
+      "wrong_department_rate": "target <= 5%",
+      "human_override_rate": "monitor_for_calibration",
+      "evidence_coverage_rate": "target >= 95%",
+      "avg_triage_turns": "target <= 6",
+      "avg_latency_seconds": "target <= 8"
+    },
+    "acceptance_gates": [
+      "no critical safety violation in red-case suite",
+      "all outputs schema-valid",
+      "all red decisions have rule citations",
+      "regression does not worsen red_miss_rate"
+    ]
+  },
+  "optimization_loop": {
+    "cadence": "weekly",
+    "steps": [
+      "sample_and_review_failures",
+      "root_cause_tagging: retrieval|rules|prompt|mapping",
+      "patch_rules_or_retrieval_first",
+      "prompt_tuning_second",
+      "run_full_regression",
+      "deploy_canary_then_full_rollout"
+    ],
+    "telemetry": [
+      "triage_level_distribution",
+      "escalation_count",
+      "rule_override_count",
+      "low_confidence_count",
+      "time_to_handover"
+    ]
+  },
+  "integration_points": {
+    "upstream": [
+      "patient_agent",
+      "registration_or_intake_frontend",
+      "vitals_device_input"
+    ],
+    "downstream": [
+      "emergency_transfer_service",
+      "outpatient_registration_service",
+      "doctor_agent",
+      "medical_records_agent"
+    ],
+    "event_bus_events": [
+      "TRIAGE_STARTED",
+      "TRIAGE_RED_ALERT",
+      "TRIAGE_COMPLETED",
+      "TRIAGE_ESCALATED_TO_HUMAN"
+    ]
+  },
+  "compliance_and_audit": {
+    "requirements": [
+      "full decision traceability",
+      "human override available at any time",
+      "store rule/evidence references with final decision",
+      "log all conflict resolutions"
+    ],
+    "audit_log_schema": [
+      "trace_id",
+      "timestamp",
+      "input_snapshot_hash",
+      "llm_proposal",
+      "rule_engine_result",
+      "final_decision",
+      "override_reason",
+      "evidence_refs"
+    ]
+  },
+  "implementation_milestones": [
+    {
+      "phase": "P0",
+      "goal": "schema, prompts, basic rule engine, handover output"
+    },
+    {
+      "phase": "P1",
+      "goal": "RAG integration and evidence-grounded output"
+    },
+    {
+      "phase": "P2",
+      "goal": "offline evaluation harness and regression suite"
+    },
+    {
+      "phase": "P3",
+      "goal": "online telemetry, optimization loop, canary deployment"
+    }
+  ]
+}

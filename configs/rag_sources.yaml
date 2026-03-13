@@ -1,0 +1,10 @@
+use_openclaw_skills: true
+top_k: 5
+min_relevance_score: 0.72
+
+include_skills:
+  - medical-entity-extractor
+  - tooluniverse-clinical-guidelines
+  - clinical-diagnostic-reasoning
+  - clinical-decision-support
+  - emergency-card

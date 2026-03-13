@@ -1,0 +1,52 @@
+required_fields:
+  - chief_complaint
+  - temperature_c
+
+red_flags:
+  - name: chest_pain_critical
+    patterns:
+      - "chest pain"
+      - "胸痛"
+      - "濒死感"
+      - "压榨样胸痛"
+    note: "Possible acute coronary syndrome"
+  - name: severe_dyspnea
+    patterns:
+      - "shortness of breath"
+      - "呼吸困难"
+      - "can't breathe"
+      - "无法呼吸"
+    note: "Possible respiratory failure"
+  - name: altered_consciousness
+    patterns:
+      - "drowsy"
+      - "嗜睡"
+      - "意识改变"
+      - "confused"
+    note: "Potential shock/CNS emergency"
+  - name: active_bleeding
+    patterns:
+      - "大量出血"
+      - "active bleeding"
+      - "喷射性出血"
+    note: "Hemorrhagic risk"
+  - name: hidden_internal_bleeding_pattern
+    patterns:
+      - "车祸"
+      - "car accident"
+      - "very thirsty"
+      - "特别渴"
+      - "想睡觉"
+    note: "Polytrauma hidden critical sign"
+
+vital_thresholds:
+  spo2_low_red: 90
+  sbp_low_red: 90
+  temp_high_yellow: 39.0
+
+boundary_rules:
+  child_abdominal_pain_patterns:
+    - "abdominal pain"
+    - "stomach ache"
+    - "腹痛"
+    - "肚子疼"

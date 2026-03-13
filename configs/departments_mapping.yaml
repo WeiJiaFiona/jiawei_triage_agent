@@ -1,0 +1,30 @@
+default_department: general_outpatient
+
+keyword_routing:
+  cardiology:
+    - chest pain
+    - palpitation
+    - 心悸
+    - 胸闷
+  respiratory:
+    - cough
+    - fever
+    - 咳嗽
+    - 发热
+  gastroenterology:
+    - abdominal pain
+    - nausea
+    - diarrhea
+    - 腹痛
+    - 恶心
+    - 腹泻
+  neurology:
+    - headache
+    - dizziness
+    - 头痛
+    - 头晕
+  orthopedics:
+    - joint pain
+    - trauma
+    - 扭伤
+    - 骨痛
